@@ -14,33 +14,35 @@ interface NFTCardProps {
 }
 
 
-const NFTCard: FC<NFTCardProps> = ({ tokenId, stakingContractAddresss }) => {
+const NFTCard = ({ tokenId, isStaked, stakeInfo, collectionAddress }: any) => {
+  const router = useRouter();
+  const { contract: nftContract } = useContract(collectionAddress);
+  const { data: nft } = useNFT(nftContract, tokenId);
+  
+  // Find tier by ID Range
+  const detectedTier = ALL_TIERS.find(t => tokenId >= t.range[0] && tokenId <= t.range[1]);
+  const isEligible = detectedTier?.name === CURRENT_PAGE_NAME;
 
-    const nftDropContractAddress = "0xdc91E2fD661E88a9a1bcB1c826B5579232fc9898";
-    const stakingContractAddress = stakingContractAddresss;
-    const { contract } = useContract(nftDropContractAddress, "nft-drop");
-    const { data: nft } = useNFT(contract, tokenId);
-    console.log("are you in nft card ? in NFTcard  " + stakingContractAddresss);
-    return (
-        <>
-            {nft && (
-                <div className={styles.nftBox}>
-                    {nft.metadata && (
-                        <ThirdwebNftMedia
-                            metadata={nft.metadata}
-                            className={styles.nftMedia}
-                        />
-                    )}
-                    <h3>{nft.metadata.name}</h3>
-                    <Web3Button
-                        action={(contract) => contract?.call("withdraw", [[nft.metadata.id]])}
-                        contractAddress={stakingContractAddress}
-                    >
-                        Withdraw
-                    </Web3Button>
-                </div>
-            )}
-        </>
-    );
+  return (
+    <div className={styles.nftBoxGlass}>
+      <div className={styles.tierBadge}>Type: {detectedTier?.name || "Unknown"}</div>
+      
+      <NftMedia nftName={detectedTier?.name || "Starter"} />
+      
+      <div className={styles.nftDetails}>
+        <h3>#{tokenId} <small>{detectedTier?.name}</small></h3>
+        {isStaked ? (
+           <div className={styles.stakedInfo}>
+              <p>Locked: {formatTimer(remaining)}</p>
+              <Web3Button ... >Unstake</Web3Button>
+           </div>
+        ) : (
+           <div className={styles.unstakedActions}>
+              {isEligible ? <Web3Button ... >Stake</Web3Button> : <button ... >Switch Page</button>}
+           </div>
+        )}
+      </div>
+    </div>
+  );
 };
 export default NFTCard;

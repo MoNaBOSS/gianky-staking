@@ -1,27 +1,15 @@
-import React, { useState } from "react";
 import type { AppProps } from "next/app";
-import { ChainId, ThirdwebProvider } from "@thirdweb-dev/react";
-import Head from "next/head";
-import ThirdwebGuideFooter from "../components/guide/ThirdwebGuideFooter";
+import { ThirdwebProvider } from "@thirdweb-dev/react";
+import { Polygon } from "@thirdweb-dev/chains"; // Ensure you import the correct chain
 import "../styles/globals.css";
-import { Header } from "../components/Header"
-// import { Footer } from "./Footer"
-
-
-
-// This is the chainId your dApp will work on.
-// const activeChainId = ChainId.Polygon;
+import Layout from "../components/Layout"; // Import the new Layout
 
 function MyApp({ Component, pageProps }: AppProps) {
-
-  const [changeLan, setchangeLan] = useState(true);
-
   return (
-    <ThirdwebProvider activeChain="polygon"
-    clientId="c63fd3dcf8c9eec46c253e543b0ff569" >
-     
-      <Component {...pageProps} changeLan={changeLan} />
-      {/* <Footer /> */}
+    <ThirdwebProvider activeChain={Polygon} clientId="685db37dce344ffbfbf4ec31dd6cbcd7">
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
     </ThirdwebProvider>
   );
 }
