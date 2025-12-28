@@ -24,11 +24,11 @@ const TxPopup = ({ hash, onClose }: { hash: string; onClose: () => void }) => {
         <div style={{ fontSize: '24px' }}>🚀</div>
         <div>
           <h4 style={{ margin: 0, color: '#fff' }}>Transaction Sent</h4>
-          <span style={{ fontSize: '12px', color: '#aaa' }}>View details on Polygonscan</span>
+          <span style={{ fontSize: '12px', color: '#aaa' }}>Confirmed on Polygon</span>
         </div>
       </div>
       <a href={`https://polygonscan.com/tx/${hash}`} target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', background: '#d4af37', color: '#000', textDecoration: 'none', fontWeight: 'bold', padding: '10px', borderRadius: '8px' }}>
-        POLYGONSCAN ↗
+        VIEW ON EXPLORER ↗
       </a>
       <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#888', marginTop: '10px', width: '100%', cursor: 'pointer' }}>Close</button>
     </div>
@@ -44,6 +44,7 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo, onTxSuccess }: any) => {
   const { contract: stakingContract } = useContract(STAKING_CONTRACT_ADDRESS, STAKING_POOL_ABI);
   const { contract: nftContract } = useContract(NFT_COLLECTION_ADDRESS, "nft-collection");
   const { data: isApproved } = useContractRead(nftContract, "isApprovedForAll", [address, STAKING_CONTRACT_ADDRESS]);
+  const { data: isBlacklisted } = useContractRead(stakingContract, "isBlacklisted", [NFT_COLLECTION_ADDRESS, tokenId]);
 
   useEffect(() => {
     const i = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -55,8 +56,8 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo, onTxSuccess }: any) => {
 
   return (
     <div className={styles.nftBoxGlass}>
-      <div className={styles.tierBadge} style={{ background: isStaked ? "#da1a32" : "#d4af37", color: isStaked ? "#fff" : "#000" }}>
-        {isStaked ? "STAKED" : "AVAILABLE"}
+      <div className={styles.tierBadge} style={{ background: isBlacklisted ? "#500" : (isStaked ? "#da1a32" : "#d4af37"), color: isStaked ? "#fff" : "#000" }}>
+        {isBlacklisted ? "RESTRICTED" : (isStaked ? "STAKED" : "AVAILABLE")}
       </div>
       <img src={`/assert/ezgif.com-video-to-gif.gif`} className={styles.nftMedia} alt="NFT" />
       <div style={{ textAlign: "center" }}>
@@ -64,7 +65,7 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo, onTxSuccess }: any) => {
         {isStaked ? (
           <div>
             <div className={styles.lockLabel} style={{ marginBottom: '15px' }}>
-               {remaining > 0 ? `${Math.floor(remaining/(30*24*3600))} months ${Math.floor((remaining%(30*24*3600))/(24*3600))}d left` : "Ready"}
+               {remaining > 0 ? `${Math.floor(remaining/(30*24*3600))} months ${Math.floor((remaining%(30*24*3600))/(24*3600))}d left` : "Unlock Ready"}
             </div>
             <Web3Button 
               contractAddress={STAKING_CONTRACT_ADDRESS} 
@@ -76,25 +77,29 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo, onTxSuccess }: any) => {
           </div>
         ) : (
           <div>
-            <select value={selectedPlan} onChange={(e) => setSelectedPlan(Number(e.target.value))} className={styles.planSelect}>
-              <option value={0}>Bronze (3 months)</option>
-              <option value={1}>Silver (6 months)</option>
-              <option value={2}>Gold (12 months)</option>
-            </select>
-            {!isApproved ? (
-              <Web3Button 
-                contractAddress={NFT_COLLECTION_ADDRESS} 
-                action={(c) => c.call("setApprovalForAll", [STAKING_CONTRACT_ADDRESS, true])}
-                onSuccess={(result) => onTxSuccess(result.receipt.transactionHash)}
-                className={styles.actionBtnBlue}
-              >Approve</Web3Button>
-            ) : (
-              <Web3Button 
-                contractAddress={STAKING_CONTRACT_ADDRESS} 
-                action={(c) => c.call("stake", [[NFT_COLLECTION_ADDRESS], [tokenId], selectedPlan])}
-                onSuccess={(result) => { confetti(); onTxSuccess(result.receipt.transactionHash); }}
-                className={styles.stakeBtnPrimary}
-              >Stake</Web3Button>
+            {isBlacklisted ? <p style={{color: '#ff4444', fontWeight: 'bold', margin: '20px 0'}}>Contract Restriction Applied</p> : (
+              <>
+                <select value={selectedPlan} onChange={(e) => setSelectedPlan(Number(e.target.value))} className={styles.planSelect}>
+                  <option value={0}>Bronze (3 months)</option>
+                  <option value={1}>Silver (6 months)</option>
+                  <option value={2}>Gold (12 months)</option>
+                </select>
+                {!isApproved ? (
+                  <Web3Button 
+                    contractAddress={NFT_COLLECTION_ADDRESS} 
+                    action={(c) => c.call("setApprovalForAll", [STAKING_CONTRACT_ADDRESS, true])}
+                    onSuccess={(result) => onTxSuccess(result.receipt.transactionHash)}
+                    className={styles.actionBtnBlue}
+                  >Approve Collection</Web3Button>
+                ) : (
+                  <Web3Button 
+                    contractAddress={STAKING_CONTRACT_ADDRESS} 
+                    action={(c) => c.call("stake", [[NFT_COLLECTION_ADDRESS], [tokenId], selectedPlan])}
+                    onSuccess={(result) => { confetti(); onTxSuccess(result.receipt.transactionHash); }}
+                    className={styles.stakeBtnPrimary}
+                  >Confirm Staking</Web3Button>
+                )}
+              </>
             )}
           </div>
         )}
@@ -116,19 +121,16 @@ const Staking = () => {
   const stakedItems = useMemo(() => fullState?.[0]?.filter((s: any) => s.collection.toLowerCase() === NFT_COLLECTION_ADDRESS.toLowerCase()) || [], [fullState]);
   const contractPending = useMemo(() => fullState?.[1] ? BigNumber.from(fullState[1]) : BigNumber.from(0), [fullState]);
 
-  // FETCH WALLET NFTs
   useEffect(() => {
     if (!address) return;
     fetch(`https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}/getNFTs/?owner=${address}&contractAddresses[]=${NFT_COLLECTION_ADDRESS}`)
       .then(r => r.json()).then(j => setWalletNfts(j.ownedNfts || []));
   }, [address]);
 
-  // ACCURACY FIX: Hard-sync Reward Balance
   useEffect(() => {
     if (contractPending) setLiveReward(contractPending);
   }, [contractPending]);
 
-  // VISUAL COUNTER
   useEffect(() => {
     if (stakedItems.length === 0) return;
     const i = setInterval(() => {
@@ -151,7 +153,7 @@ const Staking = () => {
 
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <p style={{ color: '#888', fontSize: '0.8rem', textTransform: 'uppercase' }}>Available Rewards</p>
+          <p style={{ color: '#888', fontSize: '0.8rem', textTransform: 'uppercase' }}>Available Balance</p>
           <h2 className={styles.statValue}>{parseFloat(utils.formatEther(liveReward)).toFixed(6)} GKY</h2>
         </div>
         <div className={styles.statCard}>
@@ -161,16 +163,11 @@ const Staking = () => {
         <div className={styles.statCard} style={{ display: "flex", alignItems: "center" }}>
           <Web3Button 
             contractAddress={STAKING_CONTRACT_ADDRESS} 
-            action={(c) => {
-              // Simulation Fix: Ensure non-empty arrays
-              const collections = stakedItems.map((s: any) => s.collection);
-              const ids = stakedItems.map((s: any) => s.tokenId);
-              return c.call("claimReward", [collections, ids]);
-            }}
+            action={(c) => c.call("claimReward", [stakedItems.map((s: any) => s.collection), stakedItems.map((s: any) => s.tokenId)])}
             isDisabled={liveReward.isZero()} 
             onSuccess={(result) => { confetti(); setTxHash(result.receipt.transactionHash); }} 
             className={styles.claimBtnPulse}
-          >Claim Rewards</Web3Button>
+          >Claim All Rewards</Web3Button>
         </div>
       </div>
 
@@ -183,9 +180,17 @@ const Staking = () => {
 
       <div>
         <h2 style={{ color: '#d4af37', borderBottom: '1px solid #333', paddingBottom: '10px' }}>Available in Wallet ({walletNfts.length})</h2>
-        <div className={styles.nftBoxGrid}>
-          {walletNfts.map((n: any) => <NFTCard key={`w-${n.id.tokenId}`} tokenId={parseInt(n.id.tokenId, 16)} isStaked={false} onTxSuccess={setTxHash} />)}
-        </div>
+        {walletNfts.length === 0 ? (
+          <div className={styles.marketplacePortal}>
+            <h2 className={styles.goldGradientText} style={{ fontSize: '2rem' }}>No NFTs Found</h2>
+            <p style={{ color: '#aaa', margin: '20px 0' }}>It looks like you don't have any compatible Gianky NFTs. Mint one now to start earning rewards!</p>
+            <a href="https://gianky-minting.vercel.app/" target="_blank" rel="noreferrer" className={styles.ctaButton}>Get Gianky NFTs</a>
+          </div>
+        ) : (
+          <div className={styles.nftBoxGrid}>
+            {walletNfts.map((n: any) => <NFTCard key={`w-${n.id.tokenId}`} tokenId={parseInt(n.id.tokenId, 16)} isStaked={false} onTxSuccess={setTxHash} />)}
+          </div>
+        )}
       </div>
 
       <TxPopup hash={txHash} onClose={() => setTxHash("")} />
@@ -193,7 +198,6 @@ const Staking = () => {
   );
 };
 
-// Layout Fix: Strips Header/Footer
 Staking.getLayout = (page: ReactElement) => (
   <div className={styles.mainLayout}>
     <div className={styles.particles} />
