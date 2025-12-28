@@ -1,4 +1,10 @@
-import { useAddress, useContract, useContractRead, Web3Button, ConnectWallet } from "@thirdweb-dev/react"; //
+import { 
+  useAddress, 
+  useContract, 
+  useContractRead, 
+  Web3Button, 
+  ConnectWallet 
+} from "@thirdweb-dev/react";
 import { useEffect, useMemo, useState, ReactElement } from "react";
 import { BigNumber, utils } from "ethers";
 import styles from "../styles/Home.module.css";
@@ -19,11 +25,25 @@ const STAKING_CONTRACT = "0x0901d6c6c2a7e42cfe9319f7d76d073499d402ab";
 const NFT_COLLECTION = "0x106fb804D03D4EA95CaeFA45C3215b57D8E6835D";
 const ALCHEMY_KEY = "Xx_szvkGT0KJ5CT7ZdoHY";
 
-/* --- CARD COMPONENT --- */
+/* --- NFT CARD COMPONENT --- */
 const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
   const [now, setNow] = useState(Math.floor(Date.now() / 1000));
   const [selectedPlan, setSelectedPlan] = useState(0);
+  
+  // 1. Identify Tier
   const detectedTier = ALL_TIERS.find(t => tokenId >= t.range[0] && tokenId <= t.range[1]);
+
+  // 2. Connect to Contract
+  const { contract } = useContract(STAKING_CONTRACT, STAKING_POOL_ABI);
+
+  // 3. CHECK BLACKLIST STATUS
+  // This reads the 'isBlacklisted' mapping from your smart contract.
+  // Ensure the function name in your ABI matches "isBlacklisted" (or "blacklisted").
+  const { data: isBlacklisted } = useContractRead(
+    contract, 
+    "isBlacklisted", 
+    [NFT_COLLECTION, tokenId]
+  );
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -41,9 +61,14 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
   };
 
   return (
-    <div className={styles.nftBoxGlass}>
-      <div className={styles.tierBadge} style={{ background: isStaked ? "#4caf50" : "#d63d6a" }}>
-        {detectedTier?.name || "NFT"}
+    <div className={styles.nftBoxGlass} style={{ 
+      borderColor: isBlacklisted ? "#ff4444" : "rgba(255,255,255,0.1)",
+      opacity: isBlacklisted && !isStaked ? 0.7 : 1 
+    }}>
+      <div className={styles.tierBadge} style={{ 
+        background: isBlacklisted ? "#ff4444" : (isStaked ? "#4caf50" : "#d63d6a") 
+      }}>
+        {isBlacklisted ? "BLACKLISTED" : (detectedTier?.name || "NFT")}
       </div>
       
       <img 
@@ -73,23 +98,35 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
           </div>
         ) : (
           <div>
-            <select 
-              value={selectedPlan} 
-              onChange={(e) => setSelectedPlan(Number(e.target.value))} 
-              className={styles.planSelect}
-            >
-              <option value={0}>3 Months (10%)</option>
-              <option value={1}>6 Months (12%)</option>
-              <option value={2}>12 Months (15%)</option>
-            </select>
-            <Web3Button 
-              contractAddress={STAKING_CONTRACT} 
-              action={(c) => c.call("stake", [[NFT_COLLECTION], [tokenId], selectedPlan])}
-              theme="light"
-              className={styles.actionBtn}
-            >
-              Stake
-            </Web3Button>
+            {isBlacklisted ? (
+              // BLOCKED VIEW FOR BLACKLISTED ITEMS
+              <div style={{ padding: "10px", background: "rgba(255,0,0,0.1)", borderRadius: "8px", border: "1px solid #ff4444" }}>
+                <p style={{ margin: 0, color: "#ff4444", fontWeight: "bold", fontSize: "14px" }}>
+                  Action Restricted
+                </p>
+              </div>
+            ) : (
+              // NORMAL VIEW
+              <>
+                <select 
+                  value={selectedPlan} 
+                  onChange={(e) => setSelectedPlan(Number(e.target.value))} 
+                  className={styles.planSelect}
+                >
+                  <option value={0}>3 Months (10%)</option>
+                  <option value={1}>6 Months (12%)</option>
+                  <option value={2}>12 Months (15%)</option>
+                </select>
+                <Web3Button 
+                  contractAddress={STAKING_CONTRACT} 
+                  action={(c) => c.call("stake", [[NFT_COLLECTION], [tokenId], selectedPlan])}
+                  theme="light"
+                  className={styles.actionBtn}
+                >
+                  Stake
+                </Web3Button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -97,25 +134,29 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
   );
 };
 
-/* --- MAIN PAGE --- */
+/* --- MAIN DASHBOARD PAGE --- */
 const Staking = () => {
   const address = useAddress();
   const [walletNfts, setWalletNfts] = useState<any[]>([]);
   const [liveReward, setLiveReward] = useState<BigNumber>(BigNumber.from(0));
+  
   const { contract: stakingContract } = useContract(STAKING_CONTRACT, STAKING_POOL_ABI);
   const { data: fullState } = useContractRead(stakingContract, "getUserFullState", [address]);
 
+  // Filter Staked Items
   const stakedItems = useMemo(() => {
     if (!fullState?.[0]) return [];
     return fullState[0].filter((s: any) => s.collection.toLowerCase() === NFT_COLLECTION.toLowerCase());
   }, [fullState]);
 
+  // Fetch Wallet Items
   useEffect(() => {
     if (!address) return;
     const url = `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}/getNFTs/?owner=${address}&contractAddresses[]=${NFT_COLLECTION}`;
     fetch(url).then(res => res.json()).then(json => setWalletNfts(json.ownedNfts || []));
   }, [address]);
 
+  // Ticker Logic
   useEffect(() => {
     if (stakedItems.length === 0) return;
     const interval = setInterval(() => {
@@ -131,7 +172,7 @@ const Staking = () => {
     if (fullState?.[1]) setLiveReward(fullState[1]);
   }, [fullState]);
 
-  // STATE: NOT CONNECTED
+  // NOT CONNECTED STATE
   if (!address) return (
     <div className={styles.container} style={{ textAlign: "center", padding: "100px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <h1 className={styles.h1}>Staking Dashboard</h1>
@@ -140,16 +181,15 @@ const Staking = () => {
     </div>
   );
 
-  // STATE: CONNECTED
   return (
     <div className={styles.container}>
-      {/* Top Bar with Connect Wallet */}
+      {/* HEADER SECTION (Inside Page) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px" }}>
         <h1 className={styles.h1} style={{ margin: 0 }}>Dashboard</h1>
         <ConnectWallet theme="dark" />
       </div>
 
-      {/* SECTION 1: REWARDS */}
+      {/* REWARDS SECTION */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <p className={styles.statLabel}>Available Rewards</p>
@@ -178,7 +218,7 @@ const Staking = () => {
         </div>
       </div>
 
-      {/* SECTION 2: STAKED ASSETS */}
+      {/* STAKED SECTION */}
       <div className={styles.sectionHeader}>
         <h2 className={styles.h2}>Currently Staked</h2>
         <span className={styles.badgeCount}>{stakedItems.length}</span>
@@ -193,7 +233,7 @@ const Staking = () => {
         )}
       </div>
 
-      {/* SECTION 3: AVAILABLE ASSETS */}
+      {/* AVAILABLE SECTION */}
       <div className={styles.sectionHeader} style={{ marginTop: "60px" }}>
         <h2 className={styles.h2}>Available in Wallet</h2>
         <span className={styles.badgeCount}>{walletNfts.length}</span>
@@ -211,7 +251,7 @@ const Staking = () => {
   );
 };
 
-/* --- CUSTOM LAYOUT (NO HEADER) --- */
+/* --- REMOVE HEADER LAYOUT --- */
 Staking.getLayout = function getLayout(page: ReactElement) {
   return (
     <div className={styles.mainLayout}>
