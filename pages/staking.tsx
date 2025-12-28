@@ -1,9 +1,9 @@
-import { useAddress, useContract, useContractRead, Web3Button } from "@thirdweb-dev/react";
+import { useAddress, useContract, useContractRead, Web3Button, ConnectWallet } from "@thirdweb-dev/react"; //
 import { useEffect, useMemo, useState, ReactElement } from "react";
 import { BigNumber, utils } from "ethers";
 import styles from "../styles/Home.module.css";
 import { STAKING_POOL_ABI } from "../constants/abis";
-import Footer from "./Footer"; // Import Footer for the custom layout
+import Footer from "./Footer";
 
 /* --- CONFIGURATION --- */
 const ALL_TIERS = [
@@ -131,15 +131,24 @@ const Staking = () => {
     if (fullState?.[1]) setLiveReward(fullState[1]);
   }, [fullState]);
 
+  // STATE: NOT CONNECTED
   if (!address) return (
-    <div className={styles.container} style={{ textAlign: "center", padding: "100px 0" }}>
+    <div className={styles.container} style={{ textAlign: "center", padding: "100px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <h1 className={styles.h1}>Staking Dashboard</h1>
-      <p style={{ color: "#888", marginTop: "20px" }}>Connect your wallet to manage your Gianky NFTs.</p>
+      <p style={{ color: "#888", marginTop: "20px", marginBottom: "30px" }}>Connect your wallet to manage your Gianky NFTs.</p>
+      <ConnectWallet theme="dark" btnTitle="Connect Wallet" />
     </div>
   );
 
+  // STATE: CONNECTED
   return (
     <div className={styles.container}>
+      {/* Top Bar with Connect Wallet */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px" }}>
+        <h1 className={styles.h1} style={{ margin: 0 }}>Dashboard</h1>
+        <ConnectWallet theme="dark" />
+      </div>
+
       {/* SECTION 1: REWARDS */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
@@ -203,7 +212,6 @@ const Staking = () => {
 };
 
 /* --- CUSTOM LAYOUT (NO HEADER) --- */
-// This logic tells Next.js: "For this page, render ONLY the content and footer"
 Staking.getLayout = function getLayout(page: ReactElement) {
   return (
     <div className={styles.mainLayout}>
