@@ -9,21 +9,28 @@ const Nav = () => {
   // Helper to check if a link is active
   const isActive = (path) => router.pathname === path;
 
-  // The 6 Tiers Configuration
+  // Exact menu labels from giankycoin.com
   const navLinks = [
-    { name: "Starter", path: "/StarterStake" },
-    { name: "Basic", path: "/BasicStake" },
-    { name: "Standard", path: "/StandardStake" },
-    { name: "Premium", path: "/PremiumStake" },
-    { name: "VIP", path: "/VipStake" },
-    { name: "Diamond", path: "/DiamondStake" },
+    { name: "Home", path: "https://giankycoin.com/" },
+    { name: "Staking", path: "/staking" },
+    { name: "Mint", path: "/mint" },
+    { name: "Swap", path: "/swap" },
+    { name: "Whitepaper", path: "https://itishstudios.net/assert/GIANKYNFTSWhitePaper.pdf" },
   ];
 
   return (
     <nav className={styles.navbar}>
       <div className={styles.navLogo}>
-        <Link href="/" style={{ textDecoration: "none", color: "white", fontSize: "1.5rem", fontWeight: "bold" }}>
-          Gianky<span style={{ color: "#4caf50" }}>Staking</span>
+        {/* Logo matching main site branding */}
+        <Link href="/" style={{ textDecoration: "none", color: "white", display: "flex", alignItems: "center", gap: "10px" }}>
+          <img 
+             src="https://itishstudios.net/assert/78b4ba1d-c647-4d6f-aab6-a2eff6d6957e-removebg-preview-e1680104061890.png" 
+             alt="Logo" 
+             style={{ height: "40px" }}
+          />
+          <span style={{ fontSize: "1.5rem", fontWeight: "bold" }}>
+             GIANKY<span style={{ color: "#4caf50" }}>COIN</span>
+          </span>
         </Link>
       </div>
 
@@ -40,7 +47,11 @@ const Nav = () => {
       </div>
 
       <div className={styles.navConnect}>
-        <ConnectWallet theme="dark" btnTitle="Connect Wallet" />
+        <ConnectWallet 
+          theme="dark" 
+          btnTitle="Connect Wallet" 
+          className={styles.connectButton}
+        />
       </div>
     </nav>
   );
