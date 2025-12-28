@@ -2,6 +2,7 @@ import {
   useAddress, 
   useContract, 
   useContractRead, 
+  useContractWrite, //
   Web3Button, 
   ConnectWallet 
 } from "@thirdweb-dev/react";
@@ -21,28 +22,35 @@ const ALL_TIERS = [
   { name: "Diamond",  range: [5000001, 6000000], gif: "6.gif" },
 ];
 
-const STAKING_CONTRACT = "0x0901d6c6c2a7e42cfe9319f7d76d073499d402ab";
-const NFT_COLLECTION = "0x106fb804D03D4EA95CaeFA45C3215b57D8E6835D";
+const STAKING_CONTRACT_ADDRESS = "0x0901d6c6c2a7e42cfe9319f7d76d073499d402ab";
+const NFT_COLLECTION_ADDRESS = "0x106fb804D03D4EA95CaeFA45C3215b57D8E6835D";
 const ALCHEMY_KEY = "Xx_szvkGT0KJ5CT7ZdoHY";
 
-/* --- NFT CARD COMPONENT --- */
+/* --- NFT CARD COMPONENT (FIXED) --- */
 const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
+  const address = useAddress(); // Get current user wallet
   const [now, setNow] = useState(Math.floor(Date.now() / 1000));
   const [selectedPlan, setSelectedPlan] = useState(0);
   
   // 1. Identify Tier
   const detectedTier = ALL_TIERS.find(t => tokenId >= t.range[0] && tokenId <= t.range[1]);
 
-  // 2. Connect to Contract
-  const { contract } = useContract(STAKING_CONTRACT, STAKING_POOL_ABI);
+  // 2. Connect to Contracts
+  const { contract: stakingContract } = useContract(STAKING_CONTRACT_ADDRESS, STAKING_POOL_ABI);
+  const { contract: nftContract } = useContract(NFT_COLLECTION_ADDRESS, "nft-collection"); // Connect to NFT contract
 
-  // 3. CHECK BLACKLIST STATUS
-  // This reads the 'isBlacklisted' mapping from your smart contract.
-  // Ensure the function name in your ABI matches "isBlacklisted" (or "blacklisted").
+  // 3. CHECK APPROVAL & BLACKLIST
+  // Check if Staking Contract is approved to move user's NFTs
+  const { data: isApproved } = useContractRead(
+    nftContract, 
+    "isApprovedForAll", 
+    [address, STAKING_CONTRACT_ADDRESS]
+  );
+
   const { data: isBlacklisted } = useContractRead(
-    contract, 
+    stakingContract, 
     "isBlacklisted", 
-    [NFT_COLLECTION, tokenId]
+    [NFT_COLLECTION_ADDRESS, tokenId]
   );
 
   useEffect(() => {
@@ -87,8 +95,8 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
               {isLocked ? `Locked: ${formatTimer(remaining)}` : "Unlocked"}
             </div>
             <Web3Button 
-              contractAddress={STAKING_CONTRACT} 
-              action={(c) => c.call("unstake", [[NFT_COLLECTION], [tokenId]])}
+              contractAddress={STAKING_CONTRACT_ADDRESS} 
+              action={(c) => c.call("unstake", [[NFT_COLLECTION_ADDRESS], [tokenId]])}
               isDisabled={isLocked}
               theme="dark"
               className={styles.actionBtn}
@@ -99,14 +107,12 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
         ) : (
           <div>
             {isBlacklisted ? (
-              // BLOCKED VIEW FOR BLACKLISTED ITEMS
               <div style={{ padding: "10px", background: "rgba(255,0,0,0.1)", borderRadius: "8px", border: "1px solid #ff4444" }}>
                 <p style={{ margin: 0, color: "#ff4444", fontWeight: "bold", fontSize: "14px" }}>
                   Action Restricted
                 </p>
               </div>
             ) : (
-              // NORMAL VIEW
               <>
                 <select 
                   value={selectedPlan} 
@@ -117,14 +123,27 @@ const NFTCard = ({ tokenId, isStaked, stakeInfo }: any) => {
                   <option value={1}>6 Months (12%)</option>
                   <option value={2}>12 Months (15%)</option>
                 </select>
-                <Web3Button 
-                  contractAddress={STAKING_CONTRACT} 
-                  action={(c) => c.call("stake", [[NFT_COLLECTION], [tokenId], selectedPlan])}
-                  theme="light"
-                  className={styles.actionBtn}
-                >
-                  Stake
-                </Web3Button>
+
+                {/* LOGIC: Show APPROVE if not approved, otherwise show STAKE */}
+                {!isApproved ? (
+                  <Web3Button
+                    contractAddress={NFT_COLLECTION_ADDRESS}
+                    action={(c) => c.call("setApprovalForAll", [STAKING_CONTRACT_ADDRESS, true])}
+                    theme="light"
+                    className={styles.actionBtn}
+                  >
+                    Approve Staking
+                  </Web3Button>
+                ) : (
+                  <Web3Button 
+                    contractAddress={STAKING_CONTRACT_ADDRESS} 
+                    action={(c) => c.call("stake", [[NFT_COLLECTION_ADDRESS], [tokenId], selectedPlan])}
+                    theme="light"
+                    className={styles.actionBtn}
+                  >
+                    Stake
+                  </Web3Button>
+                )}
               </>
             )}
           </div>
@@ -140,19 +159,19 @@ const Staking = () => {
   const [walletNfts, setWalletNfts] = useState<any[]>([]);
   const [liveReward, setLiveReward] = useState<BigNumber>(BigNumber.from(0));
   
-  const { contract: stakingContract } = useContract(STAKING_CONTRACT, STAKING_POOL_ABI);
+  const { contract: stakingContract } = useContract(STAKING_CONTRACT_ADDRESS, STAKING_POOL_ABI);
   const { data: fullState } = useContractRead(stakingContract, "getUserFullState", [address]);
 
   // Filter Staked Items
   const stakedItems = useMemo(() => {
     if (!fullState?.[0]) return [];
-    return fullState[0].filter((s: any) => s.collection.toLowerCase() === NFT_COLLECTION.toLowerCase());
+    return fullState[0].filter((s: any) => s.collection.toLowerCase() === NFT_COLLECTION_ADDRESS.toLowerCase());
   }, [fullState]);
 
   // Fetch Wallet Items
   useEffect(() => {
     if (!address) return;
-    const url = `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}/getNFTs/?owner=${address}&contractAddresses[]=${NFT_COLLECTION}`;
+    const url = `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}/getNFTs/?owner=${address}&contractAddresses[]=${NFT_COLLECTION_ADDRESS}`;
     fetch(url).then(res => res.json()).then(json => setWalletNfts(json.ownedNfts || []));
   }, [address]);
 
@@ -203,7 +222,7 @@ const Staking = () => {
         </div>
         <div className={styles.statCard} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Web3Button 
-            contractAddress={STAKING_CONTRACT} 
+            contractAddress={STAKING_CONTRACT_ADDRESS} 
             action={(c) => {
               const ids = stakedItems.map((s: any) => s.tokenId);
               const colls = stakedItems.map((s: any) => s.collection);
