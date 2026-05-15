@@ -1,0 +1,283 @@
+/* --- GLOBAL LAYOUT --- */
+.mainLayout {
+  background-color: #050505;
+  min-height: 100vh;
+  color: #ffffff;
+  padding: 40px 20px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* --- STATS DASHBOARD (Top Section) --- */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 60px;
+}
+
+.statCard {
+  background: #111111;
+  border: 1px solid #222222;
+  border-radius: 16px;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle glow effect for cards */
+.statCard::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 100px; height: 100px;
+  background: radial-gradient(circle, rgba(0,230,118,0.1) 0%, rgba(0,0,0,0) 70%);
+  pointer-events: none;
+}
+
+.statLabel {
+  color: #888888;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* --- SECTIONS & HEADERS --- */
+.sectionTitle {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #fff;
+}
+
+.countBadge {
+  background: rgba(0, 230, 118, 0.1);
+  color: #00e676;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  border: 1px solid #00e676;
+}
+
+/* --- NFT GRID SYSTEM --- */
+.nftGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+/* --- NFT CARD STYLES --- */
+.nftCard {
+  background: #0d0d0d;
+  border: 1px solid #222222;
+  border-radius: 24px;
+  padding: 16px;
+  position: relative;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.nftCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 230, 118, 0.05);
+  border-color: #00e676 !important;
+}
+
+.imageContainer {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #151515;
+  position: relative;
+}
+
+.nftImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tierTag {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  background: #00e676;
+  color: #000000;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  z-index: 10;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* --- PROFIT BADGE (NEW) --- */
+.profitInfo {
+  background: rgba(0, 230, 118, 0.05);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 10px 0 15px 0;
+  text-align: center;
+}
+
+.profitLabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #888;
+  letter-spacing: 0.5px;
+  margin: 0 0 4px 0;
+}
+
+.profitAmount {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #00e676;
+  margin: 0;
+}
+
+/* --- CONTROLS & INPUTS --- */
+.planSelect {
+  width: 100%;
+  padding: 14px;
+  background: #111111;
+  color: #ffffff;
+  border: 1px solid #333333;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  outline: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none; /* Custom arrow can be added here if needed */
+}
+
+.planSelect:focus {
+  border-color: #00e676;
+}
+
+.lockTimeText {
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* --- BUTTONS --- */
+/* Overriding Thirdweb Button Styles */
+.greenButton {
+  background: #00e676 !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
+  border-radius: 12px !important;
+  border: none !important;
+  cursor: pointer;
+  transition: transform 0.2s ease !important;
+  min-height: 48px !important;
+}
+
+.greenButton:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(0, 230, 118, 0.4);
+}
+
+.unstakeButton {
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  min-height: 48px !important;
+  font-size: 0.9rem !important;
+}
+
+/* --- EMPTY STATE / BUY SECTION --- */
+.buyNowSection {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 20px;
+  border: 1px dashed #333333;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.01);
+  margin-top: 20px;
+}
+
+.mintBtn {
+  display: inline-flex;
+  background: #00e676;
+  color: #000000;
+  padding: 14px 32px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: 0.2s;
+  margin-top: 20px;
+}
+
+.mintBtn:hover {
+  box-shadow: 0 0 25px rgba(0, 230, 118, 0.5);
+  transform: translateY(-2px);
+}
+
+/* --- TOAST NOTIFICATIONS --- */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: #111111;
+  border-left: 4px solid #00e676;
+  padding: 20px 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  min-width: 300px;
+  animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.closeToast {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #555555;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 5px;
+}
+
+.closeToast:hover { color: #fff; }
